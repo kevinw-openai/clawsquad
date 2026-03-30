@@ -1,0 +1,11 @@
+{
+  "user": {
+    "name": "Kevin",
+    "displayName": "Kevin",
+    "timezone": "America/Los_Angeles"
+  },
+  "project": {
+    "name": "ClawSquad",
+    "description": "A multi-agent team compiler for OpenClaw"
+  }
+}

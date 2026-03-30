@@ -1,0 +1,39 @@
+{
+  "name": "example-team",
+  "description": "Lead coordinates the work, developer implements and self-verifies.",
+  "openclawHome": "~/.openclaw",
+  "sharedVarsFile": "./vars/shared.json",
+  "apply": {
+    "renderedDir": ".clawsquad/rendered",
+    "backupConfig": true,
+    "validateConfig": true,
+    "restartGateway": false
+  },
+  "roles": [
+    {
+      "id": "lead",
+      "name": "lead",
+      "description": "Single point of contact, planner, and final reviewer",
+      "templatesDir": "./roles/lead",
+      "varsFile": "./vars/lead.json",
+      "subagents": [
+        "developer"
+      ],
+      "runtime": {
+        "model": "openai-codex/gpt-5.4",
+        "toolsProfile": "coding"
+      }
+    },
+    {
+      "id": "developer",
+      "name": "developer",
+      "description": "Implementation owner with built-in self-QA",
+      "templatesDir": "./roles/developer",
+      "varsFile": "./vars/developer.json",
+      "runtime": {
+        "model": "openai-codex/gpt-5.4",
+        "toolsProfile": "coding"
+      }
+    }
+  ]
+}

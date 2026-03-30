@@ -1,0 +1,40 @@
+{
+  "name": "clawsquad",
+  "version": "0.1.0",
+  "description": "A TypeScript CLI that provisions multi-agent squads into OpenClaw.",
+  "license": "MIT",
+  "keywords": [
+    "openclaw",
+    "agents",
+    "multi-agent",
+    "cli",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "type": "module",
+  "bin": {
+    "clawsquad": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "node --import tsx --test test/**/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  }
+}
