@@ -24,6 +24,7 @@ export async function renderLoadedProject(project: LoadedProject): Promise<Rende
     const templateFiles = await walkFiles(role.templatesDir);
     const mergedVars = buildRoleVars(project.sharedVars, role.roleVars);
     const context = buildTemplateContext(
+      project.projectDir,
       project.manifest.name,
       project.manifest.description ?? "",
       project.openclawHome,
@@ -97,6 +98,7 @@ export function interpolateTemplate(template: string, context: TemplateContext):
 }
 
 function buildTemplateContext(
+  projectDir: string,
   teamName: string,
   teamDescription: string,
   openclawHome: string,
@@ -121,6 +123,9 @@ function buildTemplateContext(
       home: openclawHome,
     },
     paths: {
+      projectDir,
+      taskDb: path.join(projectDir, "runtime-tasks.db"),
+      clawcoSnapshot: path.join(projectDir, "clawco-snapshot.json"),
       workspace: role.targetWorkspaceAbs,
       agentDir: role.targetAgentDirAbs ?? "",
     },

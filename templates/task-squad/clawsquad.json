@@ -1,0 +1,56 @@
+{
+  "name": "task-squad",
+  "description": "A coordinator-led OpenClaw squad that routes coding work through Codex over ACP, tracks execution in clawtask, and exports topology for clawco.",
+  "openclawHome": "~/.openclaw",
+  "sharedVarsFile": "./vars/shared.json",
+  "apply": {
+    "renderedDir": ".clawsquad/rendered",
+    "backupConfig": true,
+    "validateConfig": true,
+    "restartGateway": false
+  },
+  "roles": [
+    {
+      "id": "lead",
+      "name": "lead",
+      "description": "Internal squad coordinator, planner, and final reviewer",
+      "lane": "command",
+      "templatesDir": "./roles/lead",
+      "varsFile": "./vars/lead.json",
+      "workspaceDir": "workspace-lead",
+      "agentDir": "agents/lead/agent",
+      "subagents": [
+        "developer",
+        "reviewer"
+      ],
+      "runtime": {
+        "model": "openai-codex/gpt-5.4",
+        "toolsProfile": "coding"
+      }
+    },
+    {
+      "id": "developer",
+      "name": "developer",
+      "description": "Primary coding worker that executes through Codex via ACP",
+      "lane": "execution",
+      "templatesDir": "./roles/developer",
+      "varsFile": "./vars/developer.json",
+      "runtime": {
+        "model": "openai-codex/gpt-5.4",
+        "toolsProfile": "coding"
+      }
+    },
+    {
+      "id": "reviewer",
+      "name": "reviewer",
+      "description": "Quality and verification specialist that challenges weak evidence",
+      "lane": "quality",
+      "templatesDir": "./roles/reviewer",
+      "varsFile": "./vars/reviewer.json",
+      "runtime": {
+        "model": "openai-codex/gpt-5.4",
+        "toolsProfile": "coding"
+      }
+    }
+  ]
+}

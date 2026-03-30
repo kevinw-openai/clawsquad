@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import type {
+  AgentLane,
   JsonMap,
   LoadedProject,
   LoadedRole,
@@ -141,11 +142,17 @@ function validateManifestShape(manifest: SquadManifest, manifestPath: string): v
     if (role.bindings != null && !Array.isArray(role.bindings)) {
       throw new Error(`Role ${role.id} in ${manifestPath} must use an array for "bindings"`);
     }
+    if (role.lane != null && !isAgentLane(role.lane)) {
+      throw new Error(
+        `Role ${role.id} in ${manifestPath} must use one of the supported "lane" values`,
+      );
+    }
   }
 }
 
 function validateSubagents(roles: SquadRoleManifest[], manifestPath: string): void {
   const roleIds = new Set(roles.map((role) => role.id));
+  const managerByRole = new Map<string, string>();
 
   for (const role of roles) {
     for (const target of role.subagents ?? []) {
@@ -154,6 +161,13 @@ function validateSubagents(roles: SquadRoleManifest[], manifestPath: string): vo
           `Role ${role.id} in ${manifestPath} references missing subagent "${target}"`,
         );
       }
+      const existingManager = managerByRole.get(target);
+      if (existingManager != null && existingManager !== role.id) {
+        throw new Error(
+          `Role ${target} in ${manifestPath} cannot be managed by both ${existingManager} and ${role.id}`,
+        );
+      }
+      managerByRole.set(target, role.id);
     }
   }
 }
@@ -164,4 +178,14 @@ function defaultWorkspaceDir(roleId: string): string {
 
 function defaultAgentDir(roleId: string): string | undefined {
   return `agents/${roleId}/agent`;
+}
+
+function isAgentLane(value: string): value is AgentLane {
+  return (
+    value === "command" ||
+    value === "planning" ||
+    value === "research" ||
+    value === "execution" ||
+    value === "quality"
+  );
 }

@@ -35,6 +35,10 @@ function makeRole(overrides: Partial<LoadedRole>): LoadedRole {
 test("mergeRolesIntoConfig updates matching agents and preserves unrelated fields", () => {
   const config: OpenClawConfig = {
     keep: true,
+    acp: {
+      enabled: true,
+      allowedAgents: ["legacy"],
+    },
     agents: {
       defaults: {
         theme: "dark",
@@ -56,6 +60,12 @@ test("mergeRolesIntoConfig updates matching agents and preserves unrelated field
           },
         },
       ],
+    },
+    tools: {
+      agentToAgent: {
+        enabled: true,
+        allow: ["legacy"],
+      },
     },
   };
 
@@ -105,6 +115,15 @@ test("mergeRolesIntoConfig updates matching agents and preserves unrelated field
   assert.equal(next.keep, true);
   assert.deepEqual(next.agents?.defaults, { theme: "dark" });
   assert.equal(next.agents?.list?.length, 2);
+  assert.deepEqual((next.acp as { allowedAgents: string[] }).allowedAgents, [
+    "developer",
+    "legacy",
+    "main",
+  ]);
+  assert.deepEqual(
+    ((next.tools as { agentToAgent: { allow: string[] } }).agentToAgent.allow),
+    ["developer", "legacy", "main"],
+  );
   assert.deepEqual(next.agents?.list?.[0], {
     id: "main",
     name: "Main Planner",
@@ -163,6 +182,36 @@ test("mergeRolesIntoConfig clears agentDir when a role opts out and honors an ex
     subagents: {
       allowAgents: [],
       keep: "yes",
+    },
+  });
+});
+
+test("mergeRolesIntoConfig creates ACP and agent-to-agent allowlists when missing", () => {
+  const next = mergeRolesIntoConfig(
+    {},
+    [
+      makeRole({
+        manifest: { id: "main" },
+        targetWorkspaceAbs: "/tmp/openclaw/workspace",
+      }),
+      makeRole({
+        manifest: { id: "developer" },
+        targetWorkspaceAbs: "/tmp/openclaw/workspace-developer",
+      }),
+    ],
+  );
+
+  assert.deepEqual(next.acp, {
+    enabled: true,
+    dispatch: {
+      enabled: true,
+    },
+    allowedAgents: ["developer", "main"],
+  });
+  assert.deepEqual(next.tools, {
+    agentToAgent: {
+      enabled: true,
+      allow: ["developer", "main"],
     },
   });
 });
