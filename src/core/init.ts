@@ -10,7 +10,7 @@ export interface InitOptions {
 }
 
 const BUILTIN_TEMPLATE_ROOT = fileURLToPath(new URL("../../templates", import.meta.url));
-const DEFAULT_TEMPLATE = "example-team";
+const DEFAULT_TEMPLATE = "task-squad";
 
 export async function initProject(
   targetDirInput: string,

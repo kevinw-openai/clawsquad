@@ -12,20 +12,20 @@ async function writeJson(filePath: string, data: unknown): Promise<void> {
   await writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, "utf8");
 }
 
-test("initProject copies the built-in example-team template", async () => {
+test("initProject copies the default task-squad template", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "clawsquad-init-"));
   try {
     const written = await initProject(tempDir);
     assert.ok(written.some((file) => file.endsWith("clawsquad.json")));
 
     const project = await loadProject(tempDir);
-    assert.equal(project.manifest.name, "example-team");
-    assert.equal(project.manifest.roles.length, 2);
+    assert.equal(project.manifest.name, "task-squad");
+    assert.equal(project.manifest.roles.length, 3);
     assert.equal(project.openclawHome, path.join(os.homedir(), ".openclaw"));
     assert.equal(project.renderedRoot, path.join(tempDir, ".clawsquad/rendered"));
 
     const roleIds = project.roles.map((role) => role.manifest.id);
-    assert.deepEqual(roleIds, ["lead", "developer"]);
+    assert.deepEqual(roleIds, ["lead", "developer", "reviewer"]);
 
     const lead = project.roles[0];
     assert.equal(lead.targetWorkspaceRel, "workspace-lead");
@@ -45,12 +45,64 @@ test("initProject copies the built-in example-team template", async () => {
       path.join(tempDir, "roles/lead/AGENTS.template.md"),
       "utf8",
     );
+    const leadToolsTemplate = await readFile(
+      path.join(tempDir, "roles/lead/TOOLS.template.md"),
+      "utf8",
+    );
     const developerTemplate = await readFile(
       path.join(tempDir, "roles/developer/AGENTS.template.md"),
       "utf8",
     );
-    assert.match(leadTemplate, /single point of contact/i);
-    assert.match(developerTemplate, /self-QA/i);
+    const reviewerTemplate = await readFile(
+      path.join(tempDir, "roles/reviewer/AGENTS.template.md"),
+      "utf8",
+    );
+    const reviewerToolsTemplate = await readFile(
+      path.join(tempDir, "roles/reviewer/TOOLS.template.md"),
+      "utf8",
+    );
+    assert.match(leadTemplate, /check completed work back against the current plan/i);
+    assert.match(leadTemplate, /delegate scoped work through subagents and `clawtask`/i);
+    assert.doesNotMatch(leadTemplate, /Codex through ACP/i);
+    assert.match(leadTemplate, /Do not implement code changes yourself/i);
+    assert.match(
+      leadTemplate,
+      /Do not start Codex ACP, open ACP sessions, or trigger any direct implementation run yourself/i,
+    );
+    assert.match(leadToolsTemplate, /deciding whether to continue, retry, or review/i);
+    assert.match(leadToolsTemplate, /Do not open files to implement patches yourself/i);
+    assert.match(
+      leadToolsTemplate,
+      /Do not launch Codex ACP, create ACP sessions, or run direct implementation commands yourself/i,
+    );
+    assert.match(developerTemplate, /use Codex through ACP/i);
+    assert.match(developerTemplate, /If Codex through ACP will do the implementation work/i);
+    assert.match(leadTemplate, /clawtask --project {{paths\.projectDir}}/i);
+    assert.match(developerTemplate, /clawtask --project {{paths\.projectDir}}/i);
+    assert.match(reviewerTemplate, /Send work back when evidence is insufficient/i);
+    assert.match(reviewerTemplate, /Review only after the implementation task/i);
+    assert.match(reviewerTemplate, /Leave an explicit `review_verdict` event/i);
+    assert.match(reviewerTemplate, /Use `completed` only when the work is approved/i);
+    assert.match(reviewerTemplate, /Use `failed` when changes are requested/i);
+    assert.doesNotMatch(reviewerTemplate, /Codex through ACP/i);
+    assert.match(reviewerToolsTemplate, /event --kind review_verdict/i);
+    assert.match(reviewerToolsTemplate, /status --set completed` only for approval/i);
+    assert.match(reviewerToolsTemplate, /status --set failed` for changes requested/i);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("initProject can still copy the example-team template explicitly", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "clawsquad-init-example-"));
+  try {
+    await initProject(tempDir, { template: "example-team" });
+    const project = await loadProject(tempDir);
+    assert.equal(project.manifest.name, "example-team");
+    assert.deepEqual(
+      project.roles.map((role) => role.manifest.id),
+      ["lead", "developer"],
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

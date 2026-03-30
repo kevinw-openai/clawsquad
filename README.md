@@ -14,11 +14,36 @@ ClawSquad is a team compiler and provisioner, not a second runtime.
 
 ## Built-in Template
 
-ClawSquad ships with one built-in template today:
+ClawSquad ships with built-in templates:
 
+- `task-squad`
 - `example-team`
 
-`example-team` is a small dev-team style setup with:
+`task-squad` is the default and is intended for the integrated ClawSquad + ClawTask + Clawco flow on an existing OpenClaw host.
+
+It uses:
+
+- `lead` as the internal coordinator
+- `developer` as the coding worker
+- `reviewer` as the verification gate
+
+The template bakes in a stricter role contract:
+
+- `lead` coordinates only: plans, delegates through `clawtask`, checks work against the plan, and queues retries through `clawtask` instead of coding directly
+- `lead` must never start Codex ACP, open a direct implementation run, or otherwise step into the developer lane, even when implementation is blocked
+- `developer` alone owns implementation and is instructed to use Codex through ACP whenever coding work is required
+- `reviewer` decides approve or reject based on plan fit, regressions, and evidence, records an explicit review verdict, and sends work back when the handoff is weak
+- `reviewer` uses `clawtask status --set completed` only for approval, and `clawtask status --set failed` for changes requested or any non-approval outcome
+- every role is instructed to use `clawtask --project <squad-dir>` so the human-facing prompt path and background listeners stay on the same runtime DB
+
+That means the intended loop is:
+
+1. `lead` plans and creates the implementation task
+2. `developer` implements and closes the task with `clawtask`
+3. `reviewer` records a `review_verdict` event and closes the review task with `completed` only for approval or `failed` for changes requested
+4. if rejected, `lead` opens the next retry task in `clawtask` instead of taking over implementation work
+
+`example-team` remains available as a smaller example setup with:
 
 - `lead`
 - `developer`
@@ -34,6 +59,7 @@ The intended flow is:
 - `init` should copy from a real template directory, not from hardcoded strings in the CLI
 - built-in templates and user templates follow the same project shape
 - role ids are not special; `main` is not reserved by ClawSquad
+- the default integrated squad avoids `main` so it does not collide with a user's human-facing entry agent
 - if you want a role to target `workspace`, set `workspaceDir` explicitly
 - if you want no `agentDir`, set `"agentDir": null`
 
@@ -69,7 +95,7 @@ node dist/cli.js help
 Create a new squad from the built-in template:
 
 ```bash
-pnpm dev -- init ~/Documents/my-squad --template example-team
+pnpm dev -- init ~/Documents/my-squad
 cd ~/Documents/my-squad
 ```
 
@@ -83,6 +109,12 @@ Validate the project and target OpenClaw home:
 
 ```bash
 pnpm --dir /path/to/clawsquad dev -- doctor .
+```
+
+Inspect the exported machine-readable topology:
+
+```bash
+pnpm --dir /path/to/clawsquad dev -- topology .
 ```
 
 Run a safe sandbox apply in `/tmp`:
@@ -115,7 +147,7 @@ A template directory is just a complete ClawSquad project skeleton that already 
 
 ## Commands
 
-### `clawsquad init [dir] [--force] [--template example-team|/path/to/template]`
+### `clawsquad init [dir] [--force] [--template task-squad|example-team|/path/to/template]`
 
 Copies a new squad project from a built-in or custom template.
 
@@ -160,13 +192,16 @@ Performs the full provisioning flow:
 2. merge role settings into `openclaw.json`
 3. optionally validate with `openclaw config validate`
 4. sync rendered files into each target workspace
-5. optionally restart the OpenClaw gateway
+5. write `.clawsquad/runtime/topology.json` for downstream tooling
+6. optionally restart the OpenClaw gateway
 
 Defaults:
 
 - validation is on
 - gateway restart is off
 - config backup is on
+
+During apply, ClawSquad also keeps the OpenClaw ACP / agent-to-agent allowlists in sync with the squad's role ids so newly provisioned agents can coordinate immediately.
 
 With `--dry-run`, ClawSquad:
 
@@ -176,19 +211,48 @@ With `--dry-run`, ClawSquad:
 - runs the normal apply flow there
 - never restarts the live gateway
 
+### `clawsquad topology [dir]`
+
+Prints the machine-readable topology JSON used by downstream tooling such as `clawtask snapshot` and `clawco`.
+
+The same payload is written to:
+
+```text
+.clawsquad/runtime/topology.json
+```
+
+whenever `apply` succeeds.
+
+## OpenClaw Setup Notes
+
+For the integrated stack, your OpenClaw instance should have:
+
+- ACP enabled
+- agent-to-agent tools enabled
+- a running gateway
+
+ClawSquad `apply` will keep the per-agent allowlists aligned with the squad roles, but it does not replace first-time OpenClaw onboarding. If your host has never enabled ACP or gateway services, run the normal OpenClaw onboarding/configuration flow first.
+
+If you enable ACP, install the `acpx` runtime plugin, or change ACP plugin permissions on an already-running host, restart the gateway before testing delegated coding work:
+
+```bash
+openclaw gateway restart
+```
+
 ## Template Layout
 
-The built-in template lives at `templates/example-team`.
+The default integrated template lives at `templates/task-squad`.
 
 Its shape is:
 
 ```text
-example-team/
+task-squad/
 ├── clawsquad.json
 ├── vars/
 │   ├── shared.json
 │   ├── lead.json
-│   └── developer.json
+│   ├── developer.json
+│   └── reviewer.json
 └── roles/
     ├── lead/
     │   ├── AGENTS.template.md
@@ -198,6 +262,13 @@ example-team/
     │   ├── TOOLS.template.md
     │   └── USER.template.md
     └── developer/
+        ├── AGENTS.template.md
+        ├── HEARTBEAT.template.md
+        ├── IDENTITY.template.md
+        ├── SOUL.template.md
+        ├── TOOLS.template.md
+        └── USER.template.md
+    └── reviewer/
         ├── AGENTS.template.md
         ├── HEARTBEAT.template.md
         ├── IDENTITY.template.md
@@ -215,8 +286,8 @@ Minimal example:
   "name": "my-team",
   "roles": [
     {
-      "id": "lead",
-      "templatesDir": "./roles/lead"
+      "id": "main",
+      "templatesDir": "./roles/main"
     }
   ]
 }
@@ -241,12 +312,22 @@ Example with two roles:
       "id": "lead",
       "templatesDir": "./roles/lead",
       "varsFile": "./vars/lead.json",
-      "subagents": ["developer"]
+      "workspaceDir": "workspace-lead",
+      "agentDir": "agents/lead/agent",
+      "subagents": ["developer", "reviewer"],
+      "lane": "command"
     },
     {
       "id": "developer",
       "templatesDir": "./roles/developer",
-      "varsFile": "./vars/developer.json"
+      "varsFile": "./vars/developer.json",
+      "lane": "execution"
+    },
+    {
+      "id": "reviewer",
+      "templatesDir": "./roles/reviewer",
+      "varsFile": "./vars/reviewer.json",
+      "lane": "quality"
     }
   ]
 }
@@ -258,6 +339,7 @@ Top-level fields:
 - `description`: optional squad description
 - `openclawHome`: optional OpenClaw home; defaults to `~/.openclaw`
 - `sharedVarsFile`: optional JSON vars merged into every role
+- `lane`: optional Clawco visualization lane (`command`, `planning`, `research`, `execution`, or `quality`)
 - `apply`: optional apply-time settings
 - `roles`: required list of role definitions
 

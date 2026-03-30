@@ -18,6 +18,7 @@ export interface SquadRoleManifest {
   id: string;
   name?: string;
   description?: string;
+  lane?: AgentLane;
   templatesDir: string;
   varsFile?: string;
   workspaceDir?: string;
@@ -55,6 +56,13 @@ export interface RoleRuntime {
   model?: string;
   toolsProfile?: string;
 }
+
+export type AgentLane =
+  | "command"
+  | "planning"
+  | "research"
+  | "execution"
+  | "quality";
 
 export interface LoadedProject {
   projectDir: string;
@@ -104,6 +112,36 @@ export interface DoctorSummary {
   project: LoadedProject;
   warnings: string[];
   checks: string[];
+}
+
+export interface SquadTopology {
+  version: 1;
+  generatedAt: string;
+  artifactPath: string;
+  team: {
+    name: string;
+    description: string;
+    projectDir: string;
+    openclawHome: string;
+  };
+  agents: SquadTopologyAgent[];
+}
+
+export interface SquadTopologyAgent {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  managerId: string | null;
+  lane: AgentLane;
+  summary: string;
+  workspace: string;
+  agentDir: string | null;
+  subagents: string[];
+  runtime: {
+    model: string;
+    toolsProfile: string;
+  };
 }
 
 export type JsonValue =

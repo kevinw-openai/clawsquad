@@ -23,6 +23,7 @@ export function mergeRolesIntoConfig(config: OpenClawConfig, roles: LoadedRole[]
   const nextConfig: OpenClawConfig = structuredClone(config);
   const agentsRoot = (nextConfig.agents ??= {});
   const list = Array.isArray(agentsRoot.list) ? [...agentsRoot.list] : [];
+  const roleIds = roles.map((role) => role.manifest.id);
 
   for (const role of roles) {
     const existingIndex = list.findIndex((entry) => entry.id === role.manifest.id);
@@ -37,6 +38,7 @@ export function mergeRolesIntoConfig(config: OpenClawConfig, roles: LoadedRole[]
   }
 
   agentsRoot.list = list;
+  mergeAgentAllowLists(nextConfig, roleIds);
   return nextConfig;
 }
 
@@ -206,4 +208,46 @@ function buildBindingKey(binding: JsonMap): string {
       backend: acp.backend ?? "",
     },
   });
+}
+
+function mergeAgentAllowLists(config: OpenClawConfig, roleIds: string[]): void {
+  const uniqueRoleIds = [...new Set(roleIds)].sort();
+
+  const acp =
+    config.acp != null && typeof config.acp === "object" && !Array.isArray(config.acp)
+      ? { ...(config.acp as JsonMap) }
+      : {};
+  const dispatch =
+    acp.dispatch != null && typeof acp.dispatch === "object" && !Array.isArray(acp.dispatch)
+      ? { ...(acp.dispatch as JsonMap) }
+      : {};
+  dispatch.enabled = typeof dispatch.enabled === "boolean" ? dispatch.enabled : true;
+  acp.enabled = typeof acp.enabled === "boolean" ? acp.enabled : true;
+  acp.dispatch = dispatch;
+  acp.allowedAgents = mergeStringArray(acp.allowedAgents, uniqueRoleIds);
+  config.acp = acp;
+
+  const tools =
+    config.tools != null && typeof config.tools === "object" && !Array.isArray(config.tools)
+      ? { ...(config.tools as JsonMap) }
+      : {};
+  const agentToAgent =
+    tools.agentToAgent != null &&
+    typeof tools.agentToAgent === "object" &&
+    !Array.isArray(tools.agentToAgent)
+      ? { ...(tools.agentToAgent as JsonMap) }
+      : {};
+  agentToAgent.enabled =
+    typeof agentToAgent.enabled === "boolean" ? agentToAgent.enabled : true;
+  agentToAgent.allow = mergeStringArray(agentToAgent.allow, uniqueRoleIds);
+  tools.agentToAgent = agentToAgent;
+  config.tools = tools;
+}
+
+function mergeStringArray(existing: unknown, additions: string[]): string[] {
+  const base = Array.isArray(existing)
+    ? existing.filter((value): value is string => typeof value === "string")
+    : [];
+
+  return [...new Set([...base, ...additions])].sort();
 }

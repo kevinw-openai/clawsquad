@@ -1,0 +1,11 @@
+{
+  "user": {
+    "name": "Kevin",
+    "displayName": "Kevin",
+    "timezone": "America/Los_Angeles"
+  },
+  "project": {
+    "name": "Task Squad",
+    "description": "An OpenClaw squad wired for clawtask dispatch and clawco visualization"
+  }
+}

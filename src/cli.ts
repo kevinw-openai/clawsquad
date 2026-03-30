@@ -6,6 +6,8 @@ import { applyProject } from "./core/apply.js";
 import { doctorProject } from "./core/doctor.js";
 import { initProject } from "./core/init.js";
 import { renderProject } from "./core/render.js";
+import { buildTopology } from "./core/topology.js";
+import { loadProject } from "./core/project.js";
 
 async function main(): Promise<void> {
   const [, , command, ...rest] = process.argv;
@@ -28,6 +30,9 @@ async function main(): Promise<void> {
         return;
       case "doctor":
         await runDoctor(rest);
+        return;
+      case "topology":
+        await runTopology(rest);
         return;
       default:
         throw new Error(`Unknown command "${command}"`);
@@ -110,6 +115,13 @@ async function runDoctor(args: string[]): Promise<void> {
   }
 }
 
+async function runTopology(args: string[]): Promise<void> {
+  const options = parseArgs(args);
+  const projectDir = path.resolve(options.positionals[0] ?? process.cwd());
+  const topology = buildTopology(await loadProject(projectDir));
+  console.log(JSON.stringify(topology, null, 2));
+}
+
 function parseArgs(
   args: string[],
   valueFlags: Set<string> = new Set(),
@@ -176,12 +188,14 @@ Usage:
   clawsquad render [dir]
   clawsquad apply [dir] [--dry-run] [--restart|--no-restart] [--validate|--no-validate]
   clawsquad doctor [dir]
+  clawsquad topology [dir]
 
 Commands:
   init    copy a new clawsquad project from a built-in or custom template
   render  render role templates into .clawsquad/rendered
   apply   render, write workspace files, and patch openclaw.json
   doctor  validate project structure and local openclaw readiness
+  topology  print the machine-readable squad topology JSON
 `);
 }
 

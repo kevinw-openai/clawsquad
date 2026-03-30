@@ -4,6 +4,7 @@ import path from "node:path";
 import type { ApplySummary, JsonMap, JsonValue, LoadedProject } from "./types.js";
 import { loadProject, retargetProjectToOpenClawHome } from "./project.js";
 import { renderLoadedProject } from "./render.js";
+import { writeTopologyArtifact } from "./topology.js";
 import {
   getOpenClawConfigPath,
   mergeManagedBindingsIntoConfig,
@@ -89,6 +90,9 @@ export async function applyProject(
 
     await writeJsonFile(statePath, nextManagedState);
     updatedFiles.push(statePath);
+
+    const topologyArtifactPath = await writeTopologyArtifact(sourceProject);
+    updatedFiles.push(topologyArtifactPath);
   } catch (error) {
     await restoreConfig(configPath, config, backupPath);
     await restoreOptionalFileBuffer(statePath, previousStateSnapshot);
