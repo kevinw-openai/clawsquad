@@ -43,6 +43,10 @@ That means the intended loop is:
 3. `reviewer` records a `review_verdict` event and closes the review task with `completed` only for approval or `failed` for changes requested
 4. if rejected, `lead` opens the next retry task in `clawtask` instead of taking over implementation work
 
+Example one-shot page built through the squad:
+
+![One-shot page example](./docs/chrome-capture-2026-03-30.gif)
+
 `example-team` remains available as a smaller example setup with:
 
 - `lead`
