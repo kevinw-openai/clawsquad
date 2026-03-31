@@ -47,6 +47,10 @@ Example one-shot page built through the squad:
 
 ![One-shot page example](./docs/chrome-capture-2026-03-30.gif)
 
+Prompt sent to the `lead` agent for that run:
+
+![Lead agent prompt example](./docs/lead-agent-prompt-example.png)
+
 `example-team` remains available as a smaller example setup with:
 
 - `lead`
