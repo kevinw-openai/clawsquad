@@ -12,6 +12,16 @@ It treats a squad as data:
 
 ClawSquad is a team compiler and provisioner, not a second runtime.
 
+## Example Output
+
+Example one-shot page built through the squad after about 100 minutes of running:
+
+![One-shot page example](./docs/chrome-capture-2026-03-30.gif)
+
+Prompt sent to the `lead` agent for that run:
+
+![Lead agent prompt example](./docs/lead-agent-prompt-example.png)
+
 ## Built-in Template
 
 ClawSquad ships with built-in templates:
@@ -42,14 +52,6 @@ That means the intended loop is:
 2. `developer` implements and closes the task with `clawtask`
 3. `reviewer` records a `review_verdict` event and closes the review task with `completed` only for approval or `failed` for changes requested
 4. if rejected, `lead` opens the next retry task in `clawtask` instead of taking over implementation work
-
-Example one-shot page built through the squad after about 100 minutes of running:
-
-![One-shot page example](./docs/chrome-capture-2026-03-30.gif)
-
-Prompt sent to the `lead` agent for that run:
-
-![Lead agent prompt example](./docs/lead-agent-prompt-example.png)
 
 `example-team` remains available as a smaller example setup with:
 
